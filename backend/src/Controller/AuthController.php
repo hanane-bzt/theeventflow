@@ -29,8 +29,12 @@ class AuthController extends AbstractController
             }
         }
 
-        if ($em->getRepository(User::class)->findOneBy(['email' => $data['email']])) {
-            return $this->json(['message' => 'Email déjà utilisé'], 409);
+        if (!isset($data['consent']) || !$data['consent']) {
+            return $this->json(['message' => 'Le consentement est obligatoire.'], 422);
+        }
+
+        if ($em->getRepository(User::class)->findOneBy(['email' => mb_strtolower(trim($data['email']))])) {
+            return $this->json(['message' => 'Cet email est déjà utilisé.'], 409);
         }
 
         $user = new User();
@@ -56,47 +60,6 @@ class AuthController extends AbstractController
         $em->persist($log);
         $em->flush();
 
-        return $this->json(['message' => 'Utilisateur créé'], 201);
-    }
-
-    #[Route('/api/auth/login', name: 'api_login', methods: ['POST'])]
-    public function login(
-        Request $request,
-        EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $passwordHasher
-    ): JsonResponse {
-        $data = json_decode($request->getContent(), true) ?? [];
-
-        if (empty($data['email']) || empty($data['password'])) {
-            return $this->json(['message' => 'email et password sont obligatoires.'], 400);
-        }
-
-        $user = $entityManager->getRepository(User::class)->findOneBy([
-            'email' => mb_strtolower(trim($data['email']))
-        ]);
-
-        if (!$user) {
-            return $this->json(['message' => 'Utilisateur introuvable.'], 404);
-        }
-
-        if (!$passwordHasher->isPasswordValid($user, $data['password'])) {
-            return $this->json(['message' => 'Mot de passe incorrect.'], 401);
-        }
-
-        return $this->json([
-            'message' => 'Login OK',
-            'user' => [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'firstName' => $user->getFirstName(),
-                'lastName' => $user->getLastName(),
-                'phone' => $user->getPhone(),
-                'role' => $user->getRole(),
-                'consentDate' => $user->getConsentDate()?->format('Y-m-d H:i:s'),
-                'consentVersion' => $user->getConsentVersion(),
-                'isAnonymized' => $user->isAnonymized(),
-                'createdAt' => $user->getCreatedAt()?->format('Y-m-d H:i:s'),
-            ]
-        ]);
+        return $this->json(['message' => 'Compte créé avec succès.'], 201);
     }
 }

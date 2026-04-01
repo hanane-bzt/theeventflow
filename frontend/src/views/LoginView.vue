@@ -52,13 +52,6 @@ async function handleLogin() {
             <p class="text-gray-500 text-sm mt-1">Bon retour sur EventFlow !</p>
           </div>
 
-          <!-- Demo hint -->
-          <div class="mb-6 p-3.5 bg-indigo-50 rounded-xl border border-indigo-100 text-xs text-indigo-700 space-y-0.5">
-            <p class="font-semibold mb-1">Comptes de démonstration :</p>
-            <p>👤 Utilisateur : <span class="font-mono">user@test.com</span> / <span class="font-mono">user123</span></p>
-            <p>🎤 Organisateur : <span class="font-mono">orga@test.com</span> / <span class="font-mono">orga123</span></p>
-          </div>
-
           <AppAlert :message="error" type="error" class="mb-5" />
 
           <form @submit.prevent="handleLogin" class="space-y-4">

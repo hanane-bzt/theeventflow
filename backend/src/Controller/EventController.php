@@ -3,83 +3,91 @@
 namespace App\Controller;
 
 use App\Entity\Event;
-use App\Repository\EventRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 class EventController extends AbstractController
 {
-    #[Route('/api/events', name: 'api_events_list', methods: ['GET'])]
-    public function list(EventRepository $eventRepository): JsonResponse
+    #[Route('/api/events', methods: ['GET'])]
+    public function list(EntityManagerInterface $em): JsonResponse
     {
-        $events = $eventRepository->findBy([], ['eventDate' => 'ASC']);
-        $data = array_map(fn (Event $event) => [
-            'id' => $event->getId(),
-            'title' => $event->getTitle(),
-            'description' => $event->getDescription(),
-            'location' => $event->getLocation(),
-            'eventDate' => $event->getEventDate()->format(DATE_ATOM),
-            'capacity' => $event->getCapacity(),
-            'imageUrl' => $event->getImageUrl(),
-        ], $events);
+        $events = $em->getRepository(Event::class)->findBy(['isPublished' => true]);
 
-        return $this->json($data);
+        return $this->json($events);
     }
 
-    #[Route('/api/events/{id}', name: 'api_events_show', methods: ['GET'])]
-    public function show(Event $event): JsonResponse
+    #[Route('/api/events/{id}', methods: ['GET'])]
+    public function show(int $id, EntityManagerInterface $em): JsonResponse
     {
-        return $this->json([
-            'id' => $event->getId(),
-            'title' => $event->getTitle(),
-            'description' => $event->getDescription(),
-            'location' => $event->getLocation(),
-            'eventDate' => $event->getEventDate()->format(DATE_ATOM),
-            'capacity' => $event->getCapacity(),
-            'imageUrl' => $event->getImageUrl(),
-        ]);
-    }
+        $event = $em->getRepository(Event::class)->find($id);
 
-    #[Route('/api/events', name: 'api_events_create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $entityManager): JsonResponse
-    {
-        $this->denyAccessUnlessGranted('ROLE_USER');
-        $data = json_decode($request->getContent(), true) ?? [];
-
-        foreach (['title', 'description', 'location', 'eventDate', 'capacity'] as $field) {
-            if (!isset($data[$field]) || $data[$field] === '') {
-                return $this->json(['message' => sprintf('%s est obligatoire.', $field)], 400);
-            }
+        if (!$event) {
+            return $this->json(['message' => 'Not found'], 404);
         }
 
-        $event = (new Event())
+        return $this->json($event);
+    }
+
+    #[Route('/api/events', methods: ['POST'])]
+    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ORGANIZER');
+
+        $data = json_decode($request->getContent(), true);
+
+        $event = new Event();
+        $event
             ->setTitle($data['title'])
             ->setDescription($data['description'])
+            ->setEventDate(new \DateTime($data['eventDate']))
             ->setLocation($data['location'])
-            ->setEventDate(new \DateTimeImmutable($data['eventDate']))
-            ->setCapacity((int) $data['capacity'])
-            ->setImageUrl($data['imageUrl'] ?? null);
+            ->setMaxParticipants($data['maxParticipants'])
+            ->setOrganizer($this->getUser())
+            ->setIsPublished(true);
 
-        $entityManager->persist($event);
-        $entityManager->flush();
+        $em->persist($event);
+        $em->flush();
 
-        $entityManager->flush();
-
-        return $this->json(['message' => 'Événement mis à jour.']);
+        return $this->json(['message' => 'Event créé'], 201);
     }
 
-    #[Route('/api/events/{id}', name: 'api_events_delete', methods: ['DELETE'])]
-    public function delete(Event $event, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/api/events/{id}', methods: ['PUT'])]
+    public function update(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_USER');
-        $entityManager->remove($event);
-        $entityManager->flush();
+        $event = $em->getRepository(Event::class)->find($id);
 
-        return $this->json(['message' => 'Événement supprimé.']);
+        if (!$event) {
+            return $this->json(['message' => 'Not found'], 404);
+        }
+
+        if ($event->getOrganizer() !== $this->getUser()) {
+            return $this->json(['message' => 'Forbidden'], 403);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        $event->setTitle($data['title']);
+
+        $em->flush();
+
+        return $this->json(['message' => 'Updated']);
+    }
+
+    #[Route('/api/events/{id}', methods: ['DELETE'])]
+    public function delete(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $event = $em->getRepository(Event::class)->find($id);
+
+        if ($event->getOrganizer() !== $this->getUser()) {
+            return $this->json(['message' => 'Forbidden'], 403);
+        }
+
+        $em->remove($event);
+        $em->flush();
+
+        return $this->json(['message' => 'Deleted']);
     }
 }
-
-        

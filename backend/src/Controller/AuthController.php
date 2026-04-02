@@ -10,9 +10,12 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class AuthController extends AbstractController
 {
+    public function __construct(private readonly ValidatorInterface $validator) {}
+
     #[Route('/api/auth/register', methods: ['POST'])]
     public function register(
         Request $request,
@@ -40,13 +43,23 @@ class AuthController extends AbstractController
         $user = new User();
         $user
             ->setEmail($data['email'])
-            ->setPassword($hasher->hashPassword($user, $data['password']))
             ->setFirstName($data['firstName'])
             ->setLastName($data['lastName'])
             ->setPhone($data['phone'] ?? null)
             ->setRole($data['role'] ?? 'USER')
             ->setConsentVersion('v1')
             ->setConsentDate(new \DateTime());
+
+        $violations = $this->validator->validate($user);
+        if (count($violations) > 0) {
+            $errors = [];
+            foreach ($violations as $v) {
+                $errors[] = $v->getMessage();
+            }
+            return $this->json(['message' => implode(' ', $errors)], 422);
+        }
+
+        $user->setPassword($hasher->hashPassword($user, $data['password']));
 
         $em->persist($user);
 

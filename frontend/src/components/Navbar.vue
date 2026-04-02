@@ -45,6 +45,15 @@ function handleLogout() {
 
         <template v-if="auth.isAuthenticated">
           <router-link
+            v-if="auth.isAdmin"
+            to="/admin"
+            class="px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+            active-class="text-red-700 bg-red-50"
+          >
+            Administration
+          </router-link>
+          <router-link
+            v-else
             to="/dashboard"
             class="px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-colors"
             active-class="text-primary-600 bg-primary-50"
@@ -117,7 +126,8 @@ function handleLogout() {
         <router-link to="/events" @click="menuOpen = false" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Événements</router-link>
 
         <template v-if="auth.isAuthenticated">
-          <router-link to="/dashboard" @click="menuOpen = false" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Dashboard</router-link>
+          <router-link v-if="auth.isAdmin" to="/admin" @click="menuOpen = false" class="block px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">Administration</router-link>
+          <router-link v-else to="/dashboard" @click="menuOpen = false" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Dashboard</router-link>
           <router-link to="/profile" @click="menuOpen = false" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Mon profil</router-link>
           <router-link v-if="auth.isOrganizer" to="/events/create" @click="menuOpen = false" class="block px-3 py-2 rounded-lg text-sm font-medium text-primary-600 hover:bg-primary-50">+ Créer un événement</router-link>
           <button @click="handleLogout" class="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">Déconnexion</button>

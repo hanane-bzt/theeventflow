@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Event;
 use App\Entity\Registration;
 use App\Entity\User;
+use App\Repository\EventRepository;
 use App\Security\Voter\EventVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -48,9 +49,9 @@ class EventController extends AbstractController
     }
 
     #[Route('/api/events', methods: ['GET'])]
-    public function list(EntityManagerInterface $em): JsonResponse
+    public function list(EventRepository $repo, EntityManagerInterface $em): JsonResponse
     {
-        $events = $em->getRepository(Event::class)->findBy(['isPublished' => true], ['createdAt' => 'DESC']);
+        $events = $repo->findUpcomingPublished();
 
         $data = array_map(
             fn(Event $e) => $this->serializeEvent($e, $this->countRegistrations($e, $em)),
@@ -73,13 +74,13 @@ class EventController extends AbstractController
     }
 
     #[Route('/api/me/events', methods: ['GET'])]
-    public function myEvents(EntityManagerInterface $em): JsonResponse
+    public function myEvents(EventRepository $repo, EntityManagerInterface $em): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_ORGANIZER');
 
         /** @var User $user */
         $user = $this->getUser();
-        $events = $em->getRepository(Event::class)->findBy(['organizer' => $user], ['createdAt' => 'DESC']);
+        $events = $repo->findByOrganizer($user);
 
         $data = array_map(
             fn(Event $e) => $this->serializeEvent($e, $this->countRegistrations($e, $em)),

@@ -54,6 +54,13 @@ const routes = [
     meta: { requiresAuth: true, requiresOrganizer: true },
   },
 
+  // Admin seulement
+  {
+    path: '/admin',
+    component: () => import('@/views/AdminDashboardView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+
   //  Fallback
   {
     path: '/:pathMatch(.*)*',
@@ -72,14 +79,20 @@ const router = createRouter({
 router.beforeEach((to, _from) => {
   const auth = useAuthStore()
 
-  // Redirige les utilisateurs déjà connectés vers le dashboard
-  if (to.meta.guestOnly && auth.isAuthenticated) return '/dashboard'
+  // Redirige les utilisateurs déjà connectés vers leur espace
+  if (to.meta.guestOnly && auth.isAuthenticated) return auth.isAdmin ? '/admin' : '/dashboard'
+
+  // Un admin qui accède au dashboard utilisateur → espace admin
+  if (to.path === '/dashboard' && auth.isAdmin) return '/admin'
 
   // Route nécessitant une authentification
   if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
 
   // Route réservée aux organisateurs
   if (to.meta.requiresOrganizer && !auth.isOrganizer) return '/dashboard'
+
+  // Route réservée aux admins
+  if (to.meta.requiresAdmin && !auth.isAdmin) return '/dashboard'
 })
 
 export default router

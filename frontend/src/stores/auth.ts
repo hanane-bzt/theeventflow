@@ -21,8 +21,9 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token'))
 
   const isAuthenticated = computed(() => !!token.value)
+  const isAdmin     = computed(() => user.value?.roles.includes('ROLE_ADMIN') ?? false)
   const isOrganizer = computed(() => user.value?.roles.includes('ROLE_ORGANIZER') ?? false)
-  const isUser = computed(() => !isOrganizer.value)
+  const isUser      = computed(() => !isOrganizer.value && !isAdmin.value)
   const fullName = computed(() =>
     user.value ? `${user.value.firstName} ${user.value.lastName}` : '',
   )
@@ -82,6 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     isAuthenticated,
+    isAdmin,
     isOrganizer,
     isUser,
     fullName,

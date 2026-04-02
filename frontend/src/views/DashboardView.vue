@@ -44,14 +44,23 @@ const message = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 const cancellingId = ref<number | null>(null)
 const deletingId = ref<number | null>(null)
 
+// demande de rôle organisateur
+const roleRequestLoading = ref(false)
+const roleRequestSent    = ref(false)  // true si déjà une demande pending
+
 onMounted(async () => {
   try {
     if (auth.isOrganizer) {
       const { data } = await api.get<Event[]>('/me/events')
       myEvents.value = data
     } else {
-      const { data } = await api.get<Registration[]>('/me/registrations')
-      registrations.value = data
+      const [regRes, reqRes] = await Promise.all([
+        api.get<Registration[]>('/me/registrations'),
+        api.get<any[]>('/me/organizer-requests'),
+      ])
+      registrations.value = regRes.data
+      // vérifie s'il y a déjà une demande en attente ou approuvée
+      roleRequestSent.value = reqRes.data.some((r: any) => r.status === 'pending' || r.status === 'approved')
     }
   } finally {
     loading.value = false
@@ -99,6 +108,19 @@ function statusClass(s: string) {
     pending: 'bg-yellow-100 text-yellow-700',
     cancelled: 'bg-gray-100 text-gray-500',
   }[s] ?? 'bg-gray-100 text-gray-500'
+}
+
+async function submitRoleRequest() {
+  roleRequestLoading.value = true
+  try {
+    await api.post('/organizer/request', {})
+    roleRequestSent.value = true
+    message.value = { type: 'success', text: 'Demande envoyée ! Un administrateur va l\'examiner.' }
+  } catch (e: any) {
+    message.value = { type: 'error', text: e?.response?.data?.message ?? 'Erreur lors de l\'envoi.' }
+  } finally {
+    roleRequestLoading.value = false
+  }
 }
 </script>
 
@@ -179,7 +201,9 @@ function statusClass(s: string) {
         </div>
         <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Rôle</p>
-          <p class="text-lg font-extrabold text-primary-600">Participant</p>
+          <p class="text-lg font-extrabold text-primary-600">
+            {{ auth.isAdmin ? 'Administrateur' : auth.isOrganizer ? 'Organisateur' : 'Participant' }}
+          </p>
         </div>
       </template>
     </div>
@@ -330,5 +354,41 @@ function statusClass(s: string) {
         </div>
       </div>
     </template>
+
+    <!-- ─── Demande de rôle Organisateur (USER seulement) ─── -->
+    <template v-if="!auth.isOrganizer && !auth.isAdmin">
+      <div class="mt-10 bg-gradient-to-br from-indigo-50 to-primary-50 rounded-2xl border border-indigo-100 p-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="font-bold text-gray-900 mb-1">Devenir Organisateur</h3>
+            <p class="text-sm text-gray-600 mb-4">
+              Vous souhaitez créer et publier vos propres événements ? Soumettez une demande — un administrateur l'examinera et vous promouvra si elle est approuvée.
+            </p>
+
+            <div v-if="roleRequestSent" class="flex items-center gap-2 text-sm text-green-700 font-semibold">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Demande envoyée — en attente de validation par un administrateur.
+            </div>
+
+            <button
+              v-else
+              @click="submitRoleRequest"
+              :disabled="roleRequestLoading"
+              class="px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {{ roleRequestLoading ? 'Envoi...' : 'Envoyer une demande' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
   </div>
 </template>

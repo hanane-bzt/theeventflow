@@ -27,4 +27,4 @@ EXPOSE 10000
 
 # Lancer serveur
 
-CMD php bin/console doctrine:migrations:migrate --no-interaction || php bin/console doctrine:schema:update --force && php bin/console doctrine:fixtures:load --no-interaction --append && php -S 0.0.0.0:10000 -t public
+CMD php bin/console doctrine:database:drop --force --if-exists && php bin/console doctrine:database:create && php bin/console doctrine:migrations:migrate --no-interaction && php bin/console doctrine:fixtures:load --no-interaction && php -S 0.0.0.0:10000 -t public

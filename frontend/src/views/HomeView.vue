@@ -6,11 +6,13 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const events = ref<any[]>([])
+const totalEvents = ref<number | null>(null)
 
 onMounted(async () => {
   try {
     const { data } = await api.get<any[]>('/events')
     events.value = data.slice(0, 3)
+    totalEvents.value = data.length
   } catch {
     // homepage works without events
   }
@@ -66,12 +68,15 @@ onMounted(async () => {
   <section class="bg-white border-b border-gray-100">
     <div class="max-w-6xl mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
       <div>
-        <p class="text-3xl font-extrabold text-primary-600">4</p>
-        <p class="text-sm text-gray-500 mt-1">Événements publiés</p>
+        <p class="text-3xl font-extrabold text-primary-600">
+          <span v-if="totalEvents !== null">{{ totalEvents }}</span>
+          <span v-else class="inline-block w-8 h-8 bg-gray-100 rounded animate-pulse" />
+        </p>
+        <p class="text-sm text-gray-500 mt-1">Événements à venir</p>
       </div>
       <div>
-        <p class="text-3xl font-extrabold text-primary-600">281</p>
-        <p class="text-sm text-gray-500 mt-1">Inscriptions totales</p>
+        <p class="text-3xl font-extrabold text-primary-600">3</p>
+        <p class="text-sm text-gray-500 mt-1">Rôles disponibles</p>
       </div>
       <div>
         <p class="text-3xl font-extrabold text-primary-600">100%</p>

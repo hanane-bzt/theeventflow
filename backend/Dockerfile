@@ -28,6 +28,5 @@ EXPOSE 10000
 # Lancer serveur
 
 
-CMD php bin/console doctrine:database:create --if-not-exists \
-&& php bin/console doctrine:migrations:migrate --no-interaction \
+CMD php bin/console doctrine:migrations:migrate --no-interaction \
 && php -S 0.0.0.0:10000 -t public

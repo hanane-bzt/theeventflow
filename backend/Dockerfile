@@ -27,7 +27,8 @@ EXPOSE 10000
 
 # Lancer serveur
 
-CMD php bin/console doctrine:query:sql "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" \
+CMD sleep 10 \
+&& php bin/console doctrine:database:create --if-not-exists \
 && php bin/console doctrine:migrations:migrate --no-interaction \
 && php bin/console doctrine:fixtures:load --no-interaction \
 && php -S 0.0.0.0:10000 -t public

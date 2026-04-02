@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const routes = [
-  // ─── Public ───────────────────────────────────────────────────────────────
+  //  Public 
   {
     path: '/',
     component: () => import('@/views/HomeView.vue'),
@@ -30,7 +30,7 @@ const routes = [
     component: () => import('@/views/PrivacyView.vue'),
   },
 
-  // ─── Authentifié (USER / ORGANIZER) ──────────────────────────────────────
+  //  Authentifié (USER / ORGANIZER) 
   {
     path: '/dashboard',
     component: () => import('@/views/DashboardView.vue'),
@@ -42,7 +42,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
 
-  // ─── Organizer seulement ──────────────────────────────────────────────────
+  //  Organizer seulement 
   {
     path: '/events/create',
     component: () => import('@/views/EventFormView.vue'),
@@ -54,7 +54,7 @@ const routes = [
     meta: { requiresAuth: true, requiresOrganizer: true },
   },
 
-  // ─── Fallback ──────────────────────────────────────────────────────────────
+  //  Fallback
   {
     path: '/:pathMatch(.*)*',
     redirect: '/',
@@ -67,27 +67,19 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
-// ─── Guards de navigation ──────────────────────────────────────────────────────
+//  Guards de navigation 
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to, _from) => {
   const auth = useAuthStore()
 
   // Redirige les utilisateurs déjà connectés vers le dashboard
-  if (to.meta.guestOnly && auth.isAuthenticated) {
-    return next('/dashboard')
-  }
+  if (to.meta.guestOnly && auth.isAuthenticated) return '/dashboard'
 
   // Route nécessitant une authentification
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return next('/login')
-  }
+  if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
 
   // Route réservée aux organisateurs
-  if (to.meta.requiresOrganizer && !auth.isOrganizer) {
-    return next('/dashboard')
-  }
-
-  next()
+  if (to.meta.requiresOrganizer && !auth.isOrganizer) return '/dashboard'
 })
 
 export default router

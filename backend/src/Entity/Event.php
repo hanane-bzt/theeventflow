@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\EventRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: EventRepository::class)]
 #[ORM\Table(name: 'events')]
@@ -15,18 +16,26 @@ class Event
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Le titre est obligatoire.')]
+    #[Assert\Length(min: 3, max: 255, minMessage: 'Le titre doit faire au moins {{ limit }} caractères.')]
     private ?string $title = null;
 
     #[ORM\Column(type: 'text')]
+    #[Assert\NotBlank(message: 'La description est obligatoire.')]
+    #[Assert\Length(min: 10, minMessage: 'La description doit faire au moins {{ limit }} caractères.')]
     private ?string $description = null;
 
     #[ORM\Column(type: 'datetime')]
+    #[Assert\NotNull(message: 'La date est obligatoire.')]
     private ?\DateTimeInterface $eventDate = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank(message: 'Le lieu est obligatoire.')]
     private ?string $location = null;
 
     #[ORM\Column]
+    #[Assert\NotNull]
+    #[Assert\Positive(message: 'Le nombre de participants doit être positif.')]
     private ?int $maxParticipants = null;
 
     #[ORM\ManyToOne(targetEntity: User::class)]

@@ -4,14 +4,22 @@ namespace App\Controller;
 
 use App\Entity\ConsentLog;
 use App\Entity\User;
+use App\Event\DataAccessedEvent;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class MeController extends AbstractController
 {
+    public function __construct(
+        private readonly EventDispatcherInterface $dispatcher,
+        private readonly ValidatorInterface       $validator,
+    ) {}
+
     private function serializeUser(User $user): array
     {
         return [
@@ -30,10 +38,17 @@ class MeController extends AbstractController
     }
 
     #[Route('/api/me', methods: ['GET'])]
-    public function me(): JsonResponse
+    public function me(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
+
+        // trace l'accès aux données personnelles (RGPD — art. 30)
+        $this->dispatcher->dispatch(
+            new DataAccessedEvent($user, 'data_accessed', $request->getClientIp() ?? 'unknown', 'Consultation du profil'),
+            DataAccessedEvent::NAME
+        );
+
         return $this->json($this->serializeUser($user));
     }
 
@@ -45,17 +60,24 @@ class MeController extends AbstractController
 
         $data = json_decode($request->getContent(), true) ?? [];
 
-        if (isset($data['firstName'])) {
-            $user->setFirstName($data['firstName']);
+        if (isset($data['firstName']))       $user->setFirstName($data['firstName']);
+        if (isset($data['lastName']))        $user->setLastName($data['lastName']);
+        if (array_key_exists('phone', $data)) $user->setPhone($data['phone']);
+
+        $errors = $this->validator->validate($user);
+        if (count($errors) > 0) {
+            $messages = [];
+            foreach ($errors as $error) {
+                $messages[$error->getPropertyPath()] = $error->getMessage();
+            }
+            return $this->json(['errors' => $messages], 422);
         }
 
-        if (isset($data['lastName'])) {
-            $user->setLastName($data['lastName']);
-        }
-
-        if (array_key_exists('phone', $data)) {
-            $user->setPhone($data['phone']);
-        }
+        // trace la modification des données personnelles (RGPD — droit de rectification)
+        $this->dispatcher->dispatch(
+            new DataAccessedEvent($user, 'data_accessed', $request->getClientIp() ?? 'unknown', 'Modification du profil'),
+            DataAccessedEvent::NAME
+        );
 
         $entityManager->flush();
 

@@ -12,23 +12,27 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class ConsentController extends AbstractController
 {
+    /**
+     * POST /api/consent — mise à jour du consentement RGPD de l'utilisateur connecté.
+     * Enregistre un ConsentLog avec l'IP pseudonymisée (SHA-256).
+     */
     #[Route('/api/consent', name: 'api_consent_post', methods: ['POST'])]
     public function updateConsent(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
-        $user = $entityManager->getRepository(User::class)->find(1);
-
-        if (!$user) {
-            return $this->json(['message' => 'Utilisateur introuvable.'], 404);
-        }
+        /** @var User $user */
+        $user = $this->getUser();
 
         $data = json_decode($request->getContent(), true) ?? [];
 
-        $action = $data['action'] ?? 'consent_given';
+        $granted = (bool) ($data['granted'] ?? true);
+        $action  = $granted ? 'consent_given' : 'consent_withdrawn';
         $version = $data['consentVersion'] ?? 'v1';
 
-        $user
-            ->setConsentDate(new \DateTime())
-            ->setConsentVersion($version);
+        if ($granted) {
+            $user
+                ->setConsentDate(new \DateTime())
+                ->setConsentVersion($version);
+        }
 
         $log = new ConsentLog();
         $log
@@ -36,11 +40,12 @@ class ConsentController extends AbstractController
             ->setAction($action)
             ->setTimestamp(new \DateTime())
             ->setIpAddress(hash('sha256', $request->getClientIp() ?? 'unknown'))
-            ->setDetails($data['details'] ?? 'Consent updated');
+            ->setDetails($data['details'] ?? null);
 
         $entityManager->persist($log);
         $entityManager->flush();
 
-        return $this->json(['message' => 'Consentement mis à jour avec succès.']);
+        return $this->json(['message' => $granted ? 'Consentement accordé.' : 'Consentement retiré.']);
     }
 }
+

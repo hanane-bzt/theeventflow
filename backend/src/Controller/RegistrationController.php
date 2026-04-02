@@ -149,6 +149,6 @@ class RegistrationController extends AbstractController
         $registration->setStatus('cancelled');
         $em->flush();
 
-        return $this->json(['message' => 'Inscription annulée avec succès.']);
+        return $this->json(null, 204);
     }
 }

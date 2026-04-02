@@ -5,14 +5,17 @@ namespace App\Controller;
 use App\Entity\Event;
 use App\Entity\Registration;
 use App\Entity\User;
+use App\Security\Voter\EventVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class EventController extends AbstractController
 {
+    public function __construct(private readonly ValidatorInterface $validator) {}
     private function serializeEvent(Event $event, int $registrationsCount): array
     {
         $organizer = $event->getOrganizer();
@@ -93,22 +96,30 @@ class EventController extends AbstractController
 
         $data = json_decode($request->getContent(), true) ?? [];
 
-        if (empty($data['title']) || empty($data['description']) || empty($data['eventDate']) || empty($data['location'])) {
-            return $this->json(['message' => 'Champs obligatoires manquants.'], 400);
-        }
-
         /** @var User $user */
         $user = $this->getUser();
 
         $event = new Event();
         $event
-            ->setTitle($data['title'])
-            ->setDescription($data['description'])
-            ->setEventDate(new \DateTime($data['eventDate']))
-            ->setLocation($data['location'])
-            ->setMaxParticipants((int) ($data['maxParticipants'] ?? 50))
+            ->setTitle($data['title'] ?? '')
+            ->setDescription($data['description'] ?? '')
+            ->setLocation($data['location'] ?? '')
+            ->setMaxParticipants((int) ($data['maxParticipants'] ?? 1))
             ->setOrganizer($user)
-            ->setIsPublished((bool) ($data['isPublished'] ?? true));
+            ->setIsPublished((bool) ($data['isPublished'] ?? false));
+
+        if (!empty($data['eventDate'])) {
+            $event->setEventDate(new \DateTime($data['eventDate']));
+        }
+
+        $errors = $this->validator->validate($event);
+        if (count($errors) > 0) {
+            $messages = [];
+            foreach ($errors as $error) {
+                $messages[$error->getPropertyPath()] = $error->getMessage();
+            }
+            return $this->json(['errors' => $messages], 422);
+        }
 
         $em->persist($event);
         $em->flush();
@@ -125,18 +136,26 @@ class EventController extends AbstractController
             return $this->json(['message' => 'Événement introuvable.'], 404);
         }
 
-        if ($event->getOrganizer() !== $this->getUser()) {
-            return $this->json(['message' => 'Forbidden'], 403);
-        }
+        // le Voter vérifie que l'utilisateur connecté est bien le propriétaire
+        $this->denyAccessUnlessGranted(EventVoter::EDIT, $event);
 
         $data = json_decode($request->getContent(), true) ?? [];
 
-        if (isset($data['title']))          $event->setTitle($data['title']);
-        if (isset($data['description']))    $event->setDescription($data['description']);
-        if (isset($data['eventDate']))      $event->setEventDate(new \DateTime($data['eventDate']));
-        if (isset($data['location']))       $event->setLocation($data['location']);
+        if (isset($data['title']))           $event->setTitle($data['title']);
+        if (isset($data['description']))     $event->setDescription($data['description']);
+        if (isset($data['eventDate']))       $event->setEventDate(new \DateTime($data['eventDate']));
+        if (isset($data['location']))        $event->setLocation($data['location']);
         if (isset($data['maxParticipants'])) $event->setMaxParticipants((int) $data['maxParticipants']);
-        if (isset($data['isPublished']))    $event->setIsPublished((bool) $data['isPublished']);
+        if (isset($data['isPublished']))     $event->setIsPublished((bool) $data['isPublished']);
+
+        $errors = $this->validator->validate($event);
+        if (count($errors) > 0) {
+            $messages = [];
+            foreach ($errors as $error) {
+                $messages[$error->getPropertyPath()] = $error->getMessage();
+            }
+            return $this->json(['errors' => $messages], 422);
+        }
 
         $em->flush();
 
@@ -152,13 +171,12 @@ class EventController extends AbstractController
             return $this->json(['message' => 'Événement introuvable.'], 404);
         }
 
-        if ($event->getOrganizer() !== $this->getUser()) {
-            return $this->json(['message' => 'Forbidden'], 403);
-        }
+        // le Voter vérifie que l'utilisateur connecté est bien le propriétaire
+        $this->denyAccessUnlessGranted(EventVoter::DELETE, $event);
 
         $em->remove($event);
         $em->flush();
 
-        return $this->json(['message' => 'Événement supprimé.']);
+        return $this->json(null, 204);
     }
 }

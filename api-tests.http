@@ -1,0 +1,280 @@
+### EventFlow — Tests API
+### Utiliser avec l'extension REST Client (VS Code) ou IntelliJ HTTP Client
+### Lancer le backend : php -S localhost:8000 -t public public/index.php
+
+@baseUrl = http://localhost:8000
+@token = REMPLACER_PAR_LE_TOKEN_JWT
+
+
+# =============================================================================
+# AUTHENTIFICATION
+# =============================================================================
+
+### Créer un compte utilisateur
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@test.fr",
+  "password": "Password1!",
+  "firstName": "Jean",
+  "lastName": "Dupont",
+  "consent": true
+}
+
+###
+
+### Créer un compte organisateur
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "orga@test.fr",
+  "password": "Password1!",
+  "firstName": "Marie",
+  "lastName": "Martin",
+  "role": "ORGANIZER",
+  "consent": true
+}
+
+###
+
+### Créer un compte admin
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin@test.fr",
+  "password": "Password1!",
+  "firstName": "Admin",
+  "lastName": "Test",
+  "role": "ADMIN",
+  "consent": true
+}
+
+###
+
+### Se connecter (récupérer le JWT)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@test.fr",
+  "password": "Password1!"
+}
+
+
+# =============================================================================
+# PROFIL UTILISATEUR (RGPD)
+# =============================================================================
+
+### Consulter son profil
+GET {{baseUrl}}/api/me
+Authorization: Bearer {{token}}
+
+###
+
+### Modifier son profil
+PUT {{baseUrl}}/api/me
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "firstName": "Jean-Pierre",
+  "lastName": "Dupont",
+  "phone": "0612345678"
+}
+
+###
+
+### Mettre à jour le consentement
+PUT {{baseUrl}}/api/me/consent
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "granted": true
+}
+
+###
+
+### Anonymiser son compte (droit à l'effacement RGPD)
+DELETE {{baseUrl}}/api/me
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# ÉVÉNEMENTS — Accès public
+# =============================================================================
+
+### Liste des événements publiés à venir
+GET {{baseUrl}}/api/events
+
+###
+
+### Détail d'un événement
+GET {{baseUrl}}/api/events/1
+
+
+# =============================================================================
+# ÉVÉNEMENTS — Organisateur
+# =============================================================================
+
+### Créer un événement
+POST {{baseUrl}}/api/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Conférence Vue.js 2025",
+  "description": "Une conférence sur les nouveautés de Vue.js 3 et l'écosystème Vite.",
+  "eventDate": "2025-09-15T14:00:00",
+  "location": "Paris, Salle A",
+  "maxParticipants": 50,
+  "isPublished": true
+}
+
+###
+
+### Modifier un événement
+PUT {{baseUrl}}/api/events/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Conférence Vue.js 2025 — Édition spéciale",
+  "maxParticipants": 100,
+  "isPublished": true
+}
+
+###
+
+### Supprimer un événement
+DELETE {{baseUrl}}/api/events/1
+Authorization: Bearer {{token}}
+
+###
+
+### Mes événements (organisateur connecté)
+GET {{baseUrl}}/api/me/events
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# INSCRIPTIONS
+# =============================================================================
+
+### S'inscrire à un événement
+POST {{baseUrl}}/api/events/1/register
+Authorization: Bearer {{token}}
+
+###
+
+### Vérifier son inscription à un événement
+GET {{baseUrl}}/api/events/1/my-registration
+Authorization: Bearer {{token}}
+
+###
+
+### Mes inscriptions
+GET {{baseUrl}}/api/me/registrations
+Authorization: Bearer {{token}}
+
+###
+
+### Annuler une inscription
+DELETE {{baseUrl}}/api/registrations/1
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# DEMANDE DE RÔLE ORGANISATEUR
+# =============================================================================
+
+### Soumettre une demande de rôle organisateur
+POST {{baseUrl}}/api/organizer/request
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Mes demandes de rôle
+GET {{baseUrl}}/api/me/organizer-requests
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# ADMINISTRATION
+# =============================================================================
+
+### Liste de tous les événements (admin)
+GET {{baseUrl}}/api/admin/events
+Authorization: Bearer {{token}}
+
+###
+
+### Supprimer un événement (admin)
+DELETE {{baseUrl}}/api/admin/events/1
+Authorization: Bearer {{token}}
+
+###
+
+### Liste de tous les utilisateurs (admin)
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer {{token}}
+
+###
+
+### Anonymiser un utilisateur (admin — RGPD)
+DELETE {{baseUrl}}/api/admin/users/2
+Authorization: Bearer {{token}}
+
+###
+
+### Liste des demandes de rôle organisateur (admin)
+GET {{baseUrl}}/api/admin/organizer-requests
+Authorization: Bearer {{token}}
+
+###
+
+### Approuver une demande
+POST {{baseUrl}}/api/admin/organizer-requests/1/approve
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "adminComment": "Demande validée, bienvenue !"
+}
+
+###
+
+### Refuser une demande
+POST {{baseUrl}}/api/admin/organizer-requests/1/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "adminComment": "Profil insuffisant pour le moment."
+}
+
+
+# =============================================================================
+# CONSENTEMENT & LOGS (RGPD)
+# =============================================================================
+
+### Consulter les logs de consentement
+GET {{baseUrl}}/api/consent/logs
+Authorization: Bearer {{token}}
+
+###
+
+### Enregistrer un consentement cookie
+POST {{baseUrl}}/api/consent
+Content-Type: application/json
+
+{
+  "analytics": true,
+  "marketing": false
+}

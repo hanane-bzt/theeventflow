@@ -20,4 +20,12 @@ class UserController extends AbstractController
             'roles' => $user?->getRoles(),
         ]);
     }
+
+    #[Route('/api/users', methods: ['GET'])]
+    public function getUsers(UserRepository $repo): JsonResponse
+    {
+        $users = $repo->findAll();
+
+        return $this->json($users);
+    }
 }

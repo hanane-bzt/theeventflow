@@ -140,28 +140,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = ['ROLE_USER'];
-
         if ($this->role === 'ORGANIZER') {
             $roles[] = 'ROLE_ORGANIZER';
         }
-
         if ($this->role === 'ADMIN') {
             $roles[] = 'ROLE_ADMIN';
         }
-
         return array_unique($roles);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'ADMIN';
+    }
+
+    public function isOrganizer(): bool
+    {
+        return $this->role === 'ORGANIZER';
     }
 
     public function setRoles(array $roles): static
     {
-        if (in_array('ROLE_ORGANIZER', $roles, true)) {
-            $this->role = 'ORGANIZER';
-        } elseif (in_array('ROLE_ADMIN', $roles, true)) {
+        if (in_array('ROLE_ADMIN', $roles, true)) {
             $this->role = 'ADMIN';
+        } elseif (in_array('ROLE_ORGANIZER', $roles, true)) {
+            $this->role = 'ORGANIZER';
         } else {
             $this->role = 'USER';
         }
-
         return $this;
     }
 

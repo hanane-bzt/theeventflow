@@ -5,6 +5,7 @@ namespace App\DataFixtures;
 use App\Entity\User;
 use App\Entity\Event;
 use App\Entity\Registration;
+use App\Entity\OrganizerRequest;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -146,5 +147,10 @@ class AppFixtures extends Fixture
         $manager->persist($r4);
 
         $manager->flush();
+
+        $organizerRequest = new OrganizerRequest();
+        $organizerRequest->setUser($user1);
+        $organizerRequest->setStatus('pending');
+        $manager->persist($organizerRequest);
     }
 }

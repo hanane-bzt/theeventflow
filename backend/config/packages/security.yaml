@@ -28,4 +28,7 @@ security:
     access_control:
         - { path: ^/api/auth, roles: PUBLIC_ACCESS }
         - { path: ^/api/events, methods: [GET], roles: PUBLIC_ACCESS }
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
+        - { path: ^/api/me, roles: ROLE_USER }
+        - { path: ^/api/organizer/request, roles: ROLE_USER }
         - { path: ^/api, roles: ROLE_USER }

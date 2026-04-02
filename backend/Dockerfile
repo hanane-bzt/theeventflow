@@ -27,4 +27,4 @@ EXPOSE 10000
 
 # Lancer serveur
 
-CMD php -S 0.0.0.0:10000 -t public
+CMD php bin/console doctrine:migrations:migrate --no-interaction && php -S 0.0.0.0:10000 -t public
